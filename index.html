@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SensorX" />
+  <title>SensorX — Mobile Dashboard</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: rgba(255,255,255,0.08);
+      --border-accent: rgba(99,211,180,0.3);
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --accent: #63d3b4;
+      --accent2: #7c8bff;
+      --accent3: #ff7c6e;
+      --accent4: #ffd166;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--muted); }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── INSTALL BANNER ── */
+    #install-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(99,211,180,0.15), rgba(124,139,255,0.15));
+      border: 1px solid var(--border-accent);
+      margin: 16px 20px 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      align-items: center;
+      gap: 12px;
+    }
+    #install-banner.show { display: flex; }
+    #install-banner p { font-size: 13px; color: var(--muted); flex: 1; }
+    #install-banner p strong { color: var(--text); }
+    #install-btn {
+      background: var(--accent);
+      color: #0a0a0f;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ── GRID ── */
+    main {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .card.full { grid-column: 1 / -1; }
+    .card:hover { border-color: rgba(255,255,255,0.15); }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-label .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+    }
+    .card-value {
+      font-family: var(--mono);
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .card-unit {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--sans);
+    }
+
+    /* ── MOTION CARD ── */
+    #motion-card { grid-column: 1 / -1; }
+    .axes {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .axis-block { text-align: center; }
+    .axis-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .axis-value {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .axis-bar-wrap {
+      margin-top: 6px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .axis-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.15s ease;
+    }
+
+    /* ── GYRO VISUAL ── */
+    #gyro-canvas {
+      display: block;
+      margin: 12px auto 0;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+
+    /* ── BATTERY ── */
+    .battery-shell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .battery-body {
+      flex: 1;
+      height: 20px;
+      border: 1.5px solid var(--border);
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+    .battery-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease, background 0.5s;
+    }
+    .battery-nub {
+      width: 4px; height: 10px;
+      background: var(--border);
+      border-radius: 0 3px 3px 0;
+    }
+    .battery-pct {
+      font-family: var(--mono);
+      font-size: 13px;
+      min-width: 38px;
+      text-align: right;
+    }
+
+    /* ── NETWORK ── */
+    .net-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    /* ── GPS ── */
+    .gps-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .gps-item label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
+    .gps-item span { font-family: var(--mono); font-size: 13px; }
+
+    #gps-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--border-accent);
+      color: var(--accent);
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #gps-btn:hover { background: rgba(99,211,180,0.08); }
+
+    /* ── MINI CHART ── */
+    .sparkline { display: block; margin-top: 10px; }
+
+    /* ── TIME CARD ── */
+    #clock {
+      font-family: var(--mono);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent2);
+      margin: 4px 0;
+      letter-spacing: -1px;
+    }
+    #date-str { font-size: 12px; color: var(--muted); }
+
+    /* ── DEVICE INFO ── */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row span:first-child { color: var(--muted); }
+    .info-row span:last-child { font-family: var(--mono); font-size: 12px; color: var(--text); }
+
+    /* ── AMBIENT LIGHT ── */
+    #light-ring {
+      width: 70px; height: 70px;
+      border-radius: 50%;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 0.5s, box-shadow 0.5s;
+    }
+
+    /* ── PERMISSION NOTICE ── */
+    .perm-notice {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      padding: 8px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px 20px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── GLOW ACCENTS ── */
+    .glow-teal { color: var(--accent); }
+    .glow-purple { color: var(--accent2); }
+    .glow-red { color: var(--accent3); }
+    .glow-yellow { color: var(--accent4); }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .card:hover::before { opacity: 1; }
+    .card.accent-teal::before { background: var(--accent); }
+    .card.accent-purple::before { background: var(--accent2); }
+    .card.accent-red::before { background: var(--accent3); }
+    .card.accent-yellow::before { background: var(--accent4); }
+
+    @media (max-width: 360px) {
+      main { padding: 12px; gap: 10px; }
+      .card-value { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Sensor<span>X</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:12px;color:var(--muted);font-family:var(--mono);" id="header-time"></span>
+    <div class="status-dot"></div>
+  </div>
+</header>
+
+<div id="install-banner">
+  <p><strong>Install SensorX</strong> — Add to home screen for offline access</p>
+  <button id="install-btn">Install</button>
+</div>
+
+<main>
+
+  <!-- CLOCK -->
+  <div class="card accent-purple">
+    <div class="card-label"><div class="dot" style="background:var(--accent2)"></div> Local Time</div>
+    <div id="clock">--:--:--</div>
+    <div id="date-str">—</div>
+  </div>
+
+  <!-- BATTERY -->
+  <div class="card accent-yellow">
+    <div class="card-label"><div class="dot" style="background:var(--accent4)"></div> Battery</div>
+    <div class="card-value glow-yellow" id="bat-val">–%</div>
+    <div class="card-unit" id="bat-status">Checking…</div>
+    <div class="battery-shell">
+      <div class="battery-body"><div class="battery-fill" id="bat-fill"></div></div>
+      <div class="battery-nub"></div>
+      <div class="battery-pct" id="bat-pct">–</div>
+    </div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="card accent-teal">
+    <div class="card-label"><div class="dot" style="background:var(--accent)"></div> Network</div>
+    <div class="card-value glow-teal" id="net-type">–</div>
+    <div class="card-unit" id="net-speed">Detecting…</div>
+    <div class="net-pill" id="net-pill" style="background:rgba(99,211,180,0.1);color:var(--accent);border:1px solid rgba(99,211,180,0.2);">
+      <div class="status-dot" style="width:6px;height:6px;"></div>
+      <span id="net-online">Online</span>
+    </div>
+  </div>
+
+  <!-- SCREEN -->
+  <div class="card accent-purple">
+    <div class="card-label"><div class="dot" style="background:var(--accent2)"></div> Display</div>
+    <div class="card-value glow-purple" id="screen-res">–</div>
+    <div class="card-unit">resolution</div>
+    <div style="margin-top:8px;font-size:12px;color:var(--muted);">DPR: <span id="dpr" style="color:var(--text);font-family:var(--mono);">–</span></div>
+    <div style="font-size:12px;color:var(--muted);">Orientation: <span id="orient" style="color:var(--text);font-family:var(--mono);">–</span></div>
+  </div>
+
+  <!-- ACCELEROMETER -->
+  <div class="card full accent-red" id="motion-card">
+    <div class="card-label"><div class="dot" style="background:var(--accent3)"></div> Accelerometer <span id="motion-perm-label" style="margin-left:auto;font-size:10px;"></span></div>
+    <div class="axes">
+      <div class="axis-block">
+        <div class="axis-label">X-axis</div>
+        <div class="axis-value glow-red" id="acc-x">0.00</div>
+        <div class="axis-bar-wrap"><div class="axis-bar" id="bar-x" style="background:var(--accent3);width:50%"></div></div>
+      </div>
+      <div class="axis-block">
+        <div class="axis-label">Y-axis</div>
+        <div class="axis-value glow-teal" id="acc-y">0.00</div>
+        <div class="axis-bar-wrap"><div class="axis-bar" id="bar-y" style="background:var(--accent);width:50%"></div></div>
+      </div>
+      <div class="axis-block">
+        <div class="axis-label">Z-axis</div>
+        <div class="axis-value glow-purple" id="acc-z">0.00</div>
+        <div class="axis-bar-wrap"><div class="axis-bar" id="bar-z" style="background:var(--accent2);width:50%"></div></div>
+      </div>
+    </div>
+    <div id="motion-notice" class="perm-notice" style="display:none;">Tap to enable motion sensors (iOS requires permission)</div>
+    <button id="motion-btn" style="display:none;margin-top:10px;width:100%;padding:10px;background:transparent;border:1px solid rgba(255,124,110,0.3);color:var(--accent3);border-radius:10px;font-family:var(--sans);font-size:13px;cursor:pointer;">Enable Motion Sensor</button>
+  </div>
+
+  <!-- GYROSCOPE VISUAL -->
+  <div class="card accent-purple">
+    <div class="card-label"><div class="dot" style="background:var(--accent2)"></div> Gyroscope</div>
+    <canvas id="gyro-canvas" width="120" height="120"></canvas>
+    <div style="text-align:center;margin-top:6px;font-size:11px;color:var(--muted);">α <span id="gy-a" style="color:var(--text);font-family:var(--mono);">0</span>° β <span id="gy-b" style="color:var(--text);font-family:var(--mono);">0</span>° γ <span id="gy-g" style="color:var(--text);font-family:var(--mono);">0</span>°</div>
+  </div>
+
+  <!-- LIGHT SENSOR -->
+  <div class="card accent-yellow">
+    <div class="card-label"><div class="dot" style="background:var(--accent4)"></div> Ambient Light</div>
+    <div id="light-ring">–</div>
+    <div style="text-align:center;font-size:11px;color:var(--muted)" id="light-label">Not available</div>
+  </div>
+
+  <!-- GPS -->
+  <div class="card full accent-teal">
+    <div class="card-label"><div class="dot" style="background:var(--accent)"></div> GPS Location</div>
+    <div class="gps-grid">
+      <div class="gps-item"><label>Latitude</label><span id="gps-lat">–</span></div>
+      <div class="gps-item"><label>Longitude</label><span id="gps-lng">–</span></div>
+      <div class="gps-item"><label>Accuracy</label><span id="gps-acc">–</span></div>
+      <div class="gps-item"><label>Altitude</label><span id="gps-alt">–</span></div>
+      <div class="gps-item"><label>Speed</label><span id="gps-spd">–</span></div>
+      <div class="gps-item"><label>Heading</label><span id="gps-hdg">–</span></div>
+    </div>
+    <button id="gps-btn">Get Location</button>
+  </div>
+
+  <!-- DEVICE INFO -->
+  <div class="card full">
+    <div class="card-label"><div class="dot" style="background:var(--muted)"></div> Device Info</div>
+    <div id="device-info"></div>
+  </div>
+
+</main>
+
+<footer>SensorX PWA · Mobile Computing Experiment · Built with Web APIs</footer>
+
+<script>
+// ── CLOCK ──
+function updateClock() {
+  const now = new Date();
+  const t = now.toLocaleTimeString('en-US', { hour12: false });
+  const d = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('clock').textContent = t;
+  document.getElementById('date-str').textContent = d;
+  document.getElementById('header-time').textContent = t;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── BATTERY ──
+async function initBattery() {
+  if (!('getBattery' in navigator)) { document.getElementById('bat-status').textContent = 'Not supported'; return; }
+  const bat = await navigator.getBattery();
+  function updateBat() {
+    const pct = Math.round(bat.level * 100);
+    document.getElementById('bat-val').textContent = pct + '%';
+    document.getElementById('bat-pct').textContent = pct + '%';
+    document.getElementById('bat-status').textContent = bat.charging ? 'Charging' : 'Discharging';
+    const fill = document.getElementById('bat-fill');
+    fill.style.width = pct + '%';
+    fill.style.background = pct > 50 ? 'var(--accent)' : pct > 20 ? 'var(--accent4)' : 'var(--accent3)';
+  }
+  updateBat();
+  bat.addEventListener('levelchange', updateBat);
+  bat.addEventListener('chargingchange', updateBat);
+}
+initBattery();
+
+// ── NETWORK ──
+function updateNetwork() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const online = navigator.onLine;
+  document.getElementById('net-online').textContent = online ? 'Online' : 'Offline';
+  document.getElementById('net-pill').style.background = online ? 'rgba(99,211,180,0.1)' : 'rgba(255,124,110,0.1)';
+  document.getElementById('net-pill').style.color = online ? 'var(--accent)' : 'var(--accent3)';
+  if (conn) {
+    document.getElementById('net-type').textContent = (conn.effectiveType || conn.type || '–').toUpperCase();
+    const dl = conn.downlink;
+    document.getElementById('net-speed').textContent = dl ? dl + ' Mbps downlink' : 'Speed unavailable';
+  } else {
+    document.getElementById('net-type').textContent = online ? 'Online' : 'Offline';
+    document.getElementById('net-speed').textContent = 'Connection API not supported';
+  }
+}
+updateNetwork();
+window.addEventListener('online', updateNetwork);
+window.addEventListener('offline', updateNetwork);
+
+// ── SCREEN ──
+function updateScreen() {
+  document.getElementById('screen-res').textContent = `${screen.width}×${screen.height}`;
+  document.getElementById('dpr').textContent = window.devicePixelRatio.toFixed(1);
+  document.getElementById('orient').textContent = screen.orientation ? screen.orientation.type.split('-')[0] : 'Unknown';
+}
+updateScreen();
+window.addEventListener('orientationchange', updateScreen);
+
+// ── GYRO CANVAS ──
+const gyroCanvas = document.getElementById('gyro-canvas');
+const gCtx = gyroCanvas.getContext('2d');
+let gyroAlpha = 0, gyroBeta = 0, gyroGamma = 0;
+
+function drawGyro() {
+  const w = gyroCanvas.width, h = gyroCanvas.height, cx = w/2, cy = h/2, r = w/2 - 10;
+  gCtx.clearRect(0, 0, w, h);
+
+  // Outer ring
+  gCtx.beginPath();
+  gCtx.arc(cx, cy, r, 0, Math.PI*2);
+  gCtx.strokeStyle = 'rgba(124,139,255,0.3)';
+  gCtx.lineWidth = 1;
+  gCtx.stroke();
+
+  // Crosshair
+  gCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+  gCtx.beginPath(); gCtx.moveTo(cx - r, cy); gCtx.lineTo(cx + r, cy); gCtx.stroke();
+  gCtx.beginPath(); gCtx.moveTo(cx, cy - r); gCtx.lineTo(cx, cy + r); gCtx.stroke();
+
+  // Ball position from gamma/beta
+  const bx = cx + (gyroGamma / 90) * r * 0.8;
+  const by = cy + (gyroBeta / 180) * r * 0.8;
+  const bxc = Math.max(cx - r + 8, Math.min(cx + r - 8, bx));
+  const byc = Math.max(cy - r + 8, Math.min(cy + r - 8, by));
+
+  gCtx.beginPath();
+  gCtx.arc(bxc, byc, 10, 0, Math.PI*2);
+  gCtx.fillStyle = 'rgba(124,139,255,0.8)';
+  gCtx.fill();
+
+  // Center dot
+  gCtx.beginPath();
+  gCtx.arc(cx, cy, 3, 0, Math.PI*2);
+  gCtx.fillStyle = 'rgba(255,255,255,0.3)';
+  gCtx.fill();
+
+  requestAnimationFrame(drawGyro);
+}
+drawGyro();
+
+// ── MOTION & ORIENTATION ──
+function handleOrientation(e) {
+  gyroAlpha = Math.round(e.alpha || 0);
+  gyroBeta = Math.round(e.beta || 0);
+  gyroGamma = Math.round(e.gamma || 0);
+  document.getElementById('gy-a').textContent = gyroAlpha;
+  document.getElementById('gy-b').textContent = gyroBeta;
+  document.getElementById('gy-g').textContent = gyroGamma;
+}
+
+function handleMotion(e) {
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+  const x = (acc.x || 0).toFixed(2);
+  const y = (acc.y || 0).toFixed(2);
+  const z = (acc.z || 0).toFixed(2);
+  document.getElementById('acc-x').textContent = x;
+  document.getElementById('acc-y').textContent = y;
+  document.getElementById('acc-z').textContent = z;
+  // Bars: map -20..20 to 0..100%
+  const toBar = v => Math.min(100, Math.max(0, ((parseFloat(v) + 20) / 40) * 100));
+  document.getElementById('bar-x').style.width = toBar(x) + '%';
+  document.getElementById('bar-y').style.width = toBar(y) + '%';
+  document.getElementById('bar-z').style.width = toBar(z) + '%';
+}
+
+// iOS 13+ needs permission
+if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+  document.getElementById('motion-notice').style.display = 'block';
+  document.getElementById('motion-btn').style.display = 'block';
+  document.getElementById('motion-btn').addEventListener('click', async () => {
+    const perm = await DeviceMotionEvent.requestPermission();
+    if (perm === 'granted') {
+      window.addEventListener('devicemotion', handleMotion);
+      window.addEventListener('deviceorientation', handleOrientation);
+      document.getElementById('motion-notice').style.display = 'none';
+      document.getElementById('motion-btn').style.display = 'none';
+    }
+  });
+} else if (typeof DeviceMotionEvent !== 'undefined') {
+  window.addEventListener('devicemotion', handleMotion);
+  window.addEventListener('deviceorientation', handleOrientation);
+  document.getElementById('motion-perm-label').textContent = 'Active';
+  document.getElementById('motion-perm-label').style.color = 'var(--accent)';
+} else {
+  document.getElementById('motion-perm-label').textContent = 'Not supported';
+}
+
+// ── AMBIENT LIGHT ──
+if ('AmbientLightSensor' in window) {
+  try {
+    const sensor = new AmbientLightSensor();
+    sensor.addEventListener('reading', () => {
+      const lux = Math.round(sensor.illuminance);
+      const ring = document.getElementById('light-ring');
+      ring.textContent = lux + ' lx';
+      const alpha = Math.min(1, lux / 1000);
+      ring.style.background = `rgba(255,209,102,${0.1 + alpha * 0.3})`;
+      ring.style.boxShadow = `0 0 ${10 + alpha * 20}px rgba(255,209,102,${0.2 + alpha * 0.4})`;
+      ring.style.color = '#ffd166';
+      document.getElementById('light-label').textContent =
+        lux < 50 ? 'Very dark' : lux < 300 ? 'Dim' : lux < 1000 ? 'Normal' : lux < 10000 ? 'Bright' : 'Very bright';
+    });
+    sensor.start();
+  } catch(e) {
+    document.getElementById('light-label').textContent = 'Sensor unavailable';
+  }
+} else {
+  const ring = document.getElementById('light-ring');
+  ring.textContent = '?';
+  ring.style.background = 'rgba(255,209,102,0.08)';
+  ring.style.color = 'var(--muted)';
+  document.getElementById('light-label').textContent = 'API not supported';
+}
+
+// ── GPS ──
+document.getElementById('gps-btn').addEventListener('click', () => {
+  const btn = document.getElementById('gps-btn');
+  btn.textContent = 'Getting location…';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const c = pos.coords;
+    document.getElementById('gps-lat').textContent = c.latitude.toFixed(6) + '°';
+    document.getElementById('gps-lng').textContent = c.longitude.toFixed(6) + '°';
+    document.getElementById('gps-acc').textContent = Math.round(c.accuracy) + ' m';
+    document.getElementById('gps-alt').textContent = c.altitude != null ? Math.round(c.altitude) + ' m' : 'N/A';
+    document.getElementById('gps-spd').textContent = c.speed != null ? (c.speed * 3.6).toFixed(1) + ' km/h' : 'N/A';
+    document.getElementById('gps-hdg').textContent = c.heading != null ? Math.round(c.heading) + '°' : 'N/A';
+    btn.textContent = 'Refresh Location';
+    btn.disabled = false;
+  }, err => {
+    btn.textContent = 'Location denied — Try again';
+    btn.disabled = false;
+  }, { enableHighAccuracy: true, timeout: 10000 });
+});
+
+// ── DEVICE INFO ──
+const ua = navigator.userAgent;
+const getPlatform = () => {
+  if (/iPhone|iPad|iPod/.test(ua)) return 'iOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac/.test(ua)) return 'macOS';
+  return 'Unknown';
+};
+const getBrowser = () => {
+  if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  if (/Edge\//.test(ua)) return 'Edge';
+  return 'Unknown';
+};
+const rows = [
+  ['Platform', getPlatform()],
+  ['Browser', getBrowser()],
+  ['Cores', navigator.hardwareConcurrency || 'N/A'],
+  ['Memory', navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'N/A'],
+  ['Language', navigator.language],
+  ['Touch points', navigator.maxTouchPoints],
+  ['Cookies', navigator.cookieEnabled ? 'Enabled' : 'Disabled'],
+  ['SW Support', 'serviceWorker' in navigator ? 'Yes' : 'No'],
+];
+document.getElementById('device-info').innerHTML = rows.map(([k, v]) =>
+  `<div class="info-row"><span>${k}</span><span>${v}</span></div>`
+).join('');
+
+// ── INSTALL PROMPT ──
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// ── SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
